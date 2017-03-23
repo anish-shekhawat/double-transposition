@@ -250,3 +250,8 @@ paket-files/
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+#dictionary files and output files
+dictionary/
+out.txt
+output.txt
