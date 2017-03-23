@@ -1,14 +1,20 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <vector>
 #include <unordered_map>
+#include <math.h>
+
+#define KEYLENGHT 19
 
 using namespace std;
 
-float score(int*, int, int);
 int get_file_char_length(FILE*);
 void compute_bigram_distribution(string const, unordered_map<string, int> &);
 int count_substring(const string, const string);
+float score(const string, const int [][KEYLENGHT], unordered_map<string, int> hashtable);
+float sum_log_freq_bigram(const int [][KEYLENGHT], unordered_map<string, int>, int, int, int);
+void likely_neighbours(vector<vector<int>> &);
 
 void main()
 {
@@ -86,4 +92,121 @@ int count_substring(const string str, const string substr)
 	}
 
 	return count;
+}
+
+float score(const string cipher, const int arr[][KEYLENGHT], unordered_map<string, int> hashtable)
+{
+	int num_rows = ceil(cipher.length() / KEYLENGHT);
+	float score = 0;
+	vector<vector<int>> B(KEYLENGHT, vector<int>(KEYLENGHT, 0));
+
+	for (int i = 0; i < KEYLENGHT; i++)
+	{
+		for (int j = 0; j < KEYLENGHT; j++)
+		{
+			if (i == j)
+				continue;
+			
+			B[i][j] = sum_log_freq_bigram(arr, hashtable, i, j, num_rows);
+		}
+	}
+
+	likely_neighbours(B);
+
+	for (int i = 0; i < B.size(); i++)
+	{
+		for (int j = 0; j < B[0].size(); j++)
+		{
+			if (B[i][j] != -1)
+			{
+				score += B[i][j];
+			}
+		}
+	}
+
+	return score;
+}
+
+float sum_log_freq_bigram(const int arr[][KEYLENGHT], unordered_map<string, int> hashtable, int left, int right, int rows)
+{
+	string temp;
+	float sum = 0;
+	unordered_map<std::string, int>::iterator it;
+
+
+	for (int i = 0; i < rows; i++)
+	{
+		if (arr[i][left] == '-' || arr[i][right] == '-')
+		{
+			if (i < (rows - 1))
+			{
+				cout << endl << "Encountered a hyphen (-) before the last row!!!";
+				exit(0);
+			}
+			break;
+		}
+
+		temp = arr[i][left];
+		temp += arr[i][right];
+
+		it = hashtable.find(temp);
+
+		if (it != hashtable.end())
+		{
+			if (it->second != 0)
+			{
+				sum += log10(it->second);
+			}
+		}
+		else
+		{
+			cout << endl << "Bigram Not Found in Hashtable";
+			exit(0);
+		}
+
+	}
+
+	sum = sum / rows;
+
+	return sum;
+}
+
+void likely_neighbours(vector<vector<int>> &B)
+{
+	float max = 1; 
+	int max_r, max_c;
+
+	vector<int> neighbour(KEYLENGHT, -1);
+
+	while (max != 0)
+	{
+		max = 0;
+		for (int i = 0; i < B.size(); i++)
+		{
+			for (int j = 0; j < B[0].size(); j++)
+			{
+				if (B[i][j] > max && neighbour[i] == -1)
+				{
+					max = B[i][j];
+					max_r = i;
+					max_c = j;
+				}
+			}
+		}
+
+		neighbour[max_r] = max_c;
+
+		for (int i = 0; i < B[0].size(); i++)
+		{
+			if (i != max_c)
+				B[max_r][i] = -1;
+		}
+
+		for (int i = 0; i < B.size(); i++)
+		{
+			if (i != max_r)
+				B[i][max_c] = -1;
+		}
+	}
+	
 }
