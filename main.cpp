@@ -5,19 +5,21 @@
 #include <unordered_map>
 #include <math.h>
 
-#define KEYLENGHT 19
+#define KEYLENGTH 19
 
 using namespace std;
 
 int get_file_char_length(FILE*);
 void compute_bigram_distribution(string const, unordered_map<string, int> &);
 int count_substring(const string, const string);
-float score(const string, const int [][KEYLENGHT], unordered_map<string, int> hashtable);
-float sum_log_freq_bigram(const int [][KEYLENGHT], unordered_map<string, int>, int, int, int);
+float score(const string, const char [][KEYLENGTH], unordered_map<string, int> hashtable);
+float sum_log_freq_bigram(const char [][KEYLENGTH], unordered_map<string, int>, int, int, int);
 void likely_neighbours(vector<vector<int>> &);
-void solveSecondTransposition(const string, const string);
-void SortKey(vector<int> &, vector<int> &, const string);
-char** BuildIntmdMatrix(const string, vector<int>, int);
+string solve_transposition(const string, const string);
+void sort_key(vector<int> &, vector<int> &, const string);
+char** build_matrix(const string, vector<int>, int);
+vector<string> dictionary_attack(const string, const string);
+string get_plaintext(char**, int, int);
 
 void main()
 {
@@ -25,7 +27,7 @@ void main()
 	string cipher;
 
 	fp.open("cipher.txt");
-	
+
 	// Store ciphertext from file
 	getline(fp, cipher);
 
@@ -35,9 +37,11 @@ void main()
 	// Get bigram distribution
 	compute_bigram_distribution(cipher, bigram_dist);
 
-	cout << endl << "Size: " << bigram_dist.size();
+	cout << endl << "Size: " << bigram_dist.size() << endl;
 
-
+	dictionary_attack("RHOTNSIDTTREYEHNECIBXTPOCSIEYECLDTERTAOHEITUEISSPSNABRPT", "keys.txt");
+	dictionary_attack("ATRYBSORHEXPHEOCTSEYTLPNIENDOATHSTCBUNIESREEDRIPICTTETSI", "keys.txt");
+	cout << endl;
 }
 
 void compute_bigram_distribution(string const cipher, unordered_map<string, int> &hashtable)
@@ -96,15 +100,15 @@ int count_substring(const string str, const string substr)
 	return count;
 }
 
-float score(const string cipher, const char arr[][KEYLENGHT], unordered_map<string, int> hashtable)
+float score(const string cipher, const char arr[][KEYLENGTH], unordered_map<string, int> hashtable)
 {
-	int num_rows = ceil(cipher.length() / KEYLENGHT);
+	int num_rows = ceil(cipher.length() / KEYLENGTH);
 	float score = 0;
-	vector<vector<float>> B(KEYLENGHT, vector<float>(KEYLENGHT, 0));
+	vector<vector<float>> B(KEYLENGTH, vector<float>(KEYLENGTH, 0));
 
-	for (int i = 0; i < KEYLENGHT; i++)
+	for (int i = 0; i < KEYLENGTH; i++)
 	{
-		for (int j = 0; j < KEYLENGHT; j++)
+		for (int j = 0; j < KEYLENGTH; j++)
 		{
 			if (i == j)
 				continue;
@@ -113,7 +117,7 @@ float score(const string cipher, const char arr[][KEYLENGHT], unordered_map<stri
 		}
 	}
 
-	likely_neighbours(B);
+	//likely_neighbours(B);
 
 	for (int i = 0; i < B.size(); i++)
 	{
@@ -129,7 +133,7 @@ float score(const string cipher, const char arr[][KEYLENGHT], unordered_map<stri
 	return score;
 }
 
-float sum_log_freq_bigram(const char arr[][KEYLENGHT], unordered_map<string, int> hashtable, int left, int right, int rows)
+float sum_log_freq_bigram(const char arr[][KEYLENGTH], unordered_map<string, int> hashtable, int left, int right, int rows)
 {
 	string temp;
 	float sum = 0;
@@ -178,7 +182,7 @@ void likely_neighbours(vector<vector<float>> &B)
 	float max = 1;
 	int max_r, max_c;
 
-	vector<int> neighbour(KEYLENGHT, -1);
+	vector<int> neighbour(KEYLENGTH, -1);
 
 	while (max != 0)
 	{
@@ -212,98 +216,132 @@ void likely_neighbours(vector<vector<float>> &B)
 	}
 }
 
-void solveSecondTransposition(const string CipherText, const string KeyArray)
+vector<string> dictionary_attack(const string cipher, const string keys_file)
 {
-	int CipherTextLength = CipherText.length();
-	int KeyLength = KeyArray.length();
-	int LongColumnCount = CipherTextLength%KeyLength;
-	int ShortColumnLength = CipherTextLength / KeyLength;
+	vector<string> possible_keys;
+	ifstream fp;
+	string key;
 
-	vector<int> KeyArrayVal(KeyLength);
-	vector<int> KeyIndexVal(KeyLength);
+	fp.open(keys_file);
 
-	SortKey(KeyArrayVal, KeyIndexVal, KeyArray);
-
-	char** FirstMatrix = BuildIntmdMatrix(CipherText, KeyIndexVal, KeyLength);
-
-	for (int i = 0; i < ShortColumnLength + 1; i++)
+	while (getline(fp, key)) 
 	{
-		cout << endl;
-
-		for (int j = 0; j < KeyLength; j++)
-		{
-			cout << FirstMatrix[i][j];
-		}
+		string plaintext = solve_transposition(cipher, key);
+		if (plaintext.size() == 0)
+			continue;
+		cout << "Key - " << key << endl;
+		cout << "Plaintext - " << plaintext << endl;
+		possible_keys.push_back(key);
 	}
+
+	return possible_keys;
 }
 
-void SortKey(vector<int> &KeyArrayVal, vector<int> &KeyIndexVal, const string KeyArray)
+string solve_transposition(const string cipher, const string key)
 {
-	int KeyLength = KeyArray.length();
-	for (int i = 0; i < KeyLength; i++)
+	string plaintext = "";
+	int cipher_length = cipher.length();
+	int key_length = key.length();
+	int short_column_length = cipher_length / key_length;
+
+	vector<int> key_array_val(key_length);
+	vector<int> key_index_val(key_length);
+
+	sort_key(key_array_val, key_index_val, key);
+
+	char** plain_matrix = build_matrix(cipher, key_index_val, key_length);
+
+	plaintext = get_plaintext(plain_matrix, short_column_length, key_length);
+	
+	return plaintext;
+}
+
+void sort_key(vector<int> &key_array_val, vector<int> &key_index_val, const string key)
+{
+	int key_length = key.length();
+	for (int i = 0; i < key_length; i++)
 	{
-		int CharValue = KeyArray[i];
-		if (CharValue > 64 && CharValue < 91)
+		int char_val = key[i];
+		if (char_val > 64 && char_val < 91)
 		{
-			CharValue = CharValue + 32;
+			char_val = char_val + 32;
 		}
-		KeyArrayVal[i] = CharValue;
-		KeyIndexVal[i] = i;
+		key_array_val[i] = char_val;
+		key_index_val[i] = i;
 	}
 
-	vector<int> KeyValCpy(KeyArrayVal);
+	vector<int> key_array_val_cpy(key_array_val);
 
-	for (int i, j = 1; j <= KeyLength - 1; j++) {
+	for (int i, j = 1; j <= key_length - 1; j++) {
 		i = j;
 
-		while (i > 0 && KeyValCpy[i] < KeyValCpy[i-1]) {
-			int temp = KeyValCpy[i];
-			KeyValCpy[i] = KeyValCpy[i - 1];
-			KeyValCpy[i-1] = temp;
-			temp = KeyIndexVal[i];
-			KeyIndexVal[i] = KeyIndexVal[i - 1];
-			KeyIndexVal[i - 1] = temp;
+		while (i > 0 && key_array_val_cpy[i] < key_array_val_cpy[i-1]) {
+			int temp = key_array_val_cpy[i];
+			key_array_val_cpy[i] = key_array_val_cpy[i - 1];
+			key_array_val_cpy[i-1] = temp;
+			temp = key_index_val[i];
+			key_index_val[i] = key_index_val[i - 1];
+			key_index_val[i - 1] = temp;
 			i--;
 		}
 	}
 }
 
-char** BuildIntmdMatrix(const string CipherText, vector<int> KeyIndexVal, int KeyLength)
+char** build_matrix(const string cipher, vector<int> key_index_val, int key_length)
 {
-	int CipherTextLength = CipherText.length();
-	int LongColumnCount = CipherTextLength%KeyLength;
-	int ShortColumnLength = CipherTextLength / KeyLength;
+	int cipher_length = cipher.length();
+	int long_column_count = cipher_length%key_length;
+	int short_column_length = cipher_length / key_length;
 
-	char** IntmdMatrix = new char*[ShortColumnLength+1];
-	for (int i = 0; i < ShortColumnLength+1; ++i)
-		IntmdMatrix[i] = new char[KeyLength];
+	char** unsorted_matrix = new char*[short_column_length+1];
+	for (int i = 0; i < short_column_length+1; ++i)
+		unsorted_matrix[i] = new char[key_length];
 
-	char** FirstMatrix = new char*[ShortColumnLength + 1];
-	for (int i = 0; i < ShortColumnLength + 1; ++i)
-		FirstMatrix[i] = new char[KeyLength];
+	char** plain_matrix = new char*[short_column_length + 1];
+	for (int i = 0; i < short_column_length + 1; ++i)
+		plain_matrix[i] = new char[key_length];
 
 	int index = 0;
-	for (int i = 0; i < KeyLength; i++)
+	for (int i = 0; i < key_length; i++)
 	{
-		for (int j = 0; j < (ShortColumnLength + 1); j++)
+		for (int j = 0; j < (short_column_length + 1); j++)
 		{
-			if (KeyIndexVal[i] >= LongColumnCount && j == ShortColumnLength)
+			if (key_index_val[i] >= long_column_count && j == short_column_length)
 			{
-				IntmdMatrix[j][i] = '-';
+				unsorted_matrix[j][i] = '-';
 				continue;
 			}
-			IntmdMatrix[j][i] = CipherText[index];
+			unsorted_matrix[j][i] = cipher[index];
 			index++;
 		}
 	}
 
-	for (int i = 0; i < KeyLength; i++)
+	for (int i = 0; i < key_length; i++)
 	{
-		for (int j = 0; j < (ShortColumnLength + 1); j++)
+		for (int j = 0; j < (short_column_length + 1); j++)
 		{
-			FirstMatrix[j][KeyIndexVal[i]] = IntmdMatrix[j][i];
+			plain_matrix[j][key_index_val[i]] = unsorted_matrix[j][i];
 		}
 	}
 
-	return FirstMatrix;
+	return plain_matrix;
+}
+
+string get_plaintext(char** plain_matrix, int short_column_length, int key_length)
+{
+	string plaintext = "";
+	for (int i = 0; i < short_column_length + 1; i++)
+	{
+		for (int j = 0; j < key_length; j++)
+		{
+			if (plain_matrix[i][j] == 45)
+				continue;
+			plaintext += plain_matrix[i][j];
+		}
+	}
+	if (plaintext.find("DOUBLETRANSPOSITION") != string::npos)
+	{
+		return plaintext;
+	}
+	return "";
 }
