@@ -24,6 +24,8 @@ void main()
 	ifstream fp;
 	string cipher;
 
+	fp.open("cipher.txt");
+	
 	// Store ciphertext from file
 	getline(fp, cipher);
 
