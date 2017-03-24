@@ -256,3 +256,5 @@ paket-files/
 dictionary/
 out.txt
 output.txt
+include/
+/out4.txt
