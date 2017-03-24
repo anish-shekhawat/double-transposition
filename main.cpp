@@ -1,38 +1,56 @@
 #include <iostream>
-#include <string.h>
-#include <stdlib.h>
+#include <fstream>
+#include <string>
+#include <vector>
 
 using namespace std;
-void solveSecondTransposition(char *, char *);
-void SortKey(int*, int*, char*);
-char** BuildIntmdMatrix(char *, int*, int);
+void solveSecondTransposition(const string, const string);
+void SortKey(vector<int> &, vector<int> &, const string);
+char** BuildIntmdMatrix(const string, vector<int>, int);
 
-int main()
+void main()
 {
-	solveSecondTransposition("RHOTNSIDTTREYEHNECIBXTPOCSIEYECLDTERTAOHEITUEISSPSNABRPT", "Secret");
-	return 0;
+	ifstream fp;
+
+	fp.open("cipher.txt");
+
+	string cipher;
+
+	// Store ciphertext from file
+	getline(fp, cipher);
+	 
+	solveSecondTransposition(cipher, "DOUBLETRANSPOSITION");
+	
 }
 
-void solveSecondTransposition(char *CipherText, char *KeyArray)
+void solveSecondTransposition(const string CipherText, const string KeyArray)
 {
-	int CipherTextLength = strlen(CipherText);
-	int KeyLength = strlen(KeyArray);
+	int CipherTextLength = CipherText.length();
+	int KeyLength = KeyArray.length();
 	int LongColumnCount = CipherTextLength%KeyLength;
 	int ShortColumnLength = CipherTextLength / KeyLength;
 
-	int* KeyArrayVal;
-	KeyArrayVal = new int[KeyLength];
-	int* KeyIndexVal;
-	KeyIndexVal = new int[KeyLength];
+	vector<int> KeyArrayVal(KeyLength);
+	vector<int> KeyIndexVal(KeyLength);
 
 	SortKey(KeyArrayVal, KeyIndexVal, KeyArray);
 
 	char** FirstMatrix = BuildIntmdMatrix(CipherText, KeyIndexVal, KeyLength);
+
+	for (int i = 0; i < ShortColumnLength + 1; i++)
+	{
+		cout << endl;
+
+		for (int j = 0; j < KeyLength; j++)
+		{
+			cout << FirstMatrix[i][j];
+		}
+	}
 }
 
-void SortKey(int* KeyArrayVal, int* KeyIndexVal, char *KeyArray)
+void SortKey(vector<int> &KeyArrayVal, vector<int> &KeyIndexVal, const string KeyArray)
 {
-	int KeyLength = strlen(KeyArray);
+	int KeyLength = KeyArray.length();
 	for (int i = 0; i < KeyLength; i++)
 	{
 		int CharValue = KeyArray[i];
@@ -44,11 +62,7 @@ void SortKey(int* KeyArrayVal, int* KeyIndexVal, char *KeyArray)
 		KeyIndexVal[i] = i;
 	}
 
-	int* KeyValCpy;
-	KeyValCpy = new int[KeyLength];
-	for (int i = 0; i < KeyLength; i++) {
-		KeyValCpy[i] = KeyArrayVal[i];
-	}
+	vector<int> KeyValCpy(KeyArrayVal);
 
 	for (int i, j = 1; j <= KeyLength - 1; j++) {
 		i = j;
@@ -65,9 +79,9 @@ void SortKey(int* KeyArrayVal, int* KeyIndexVal, char *KeyArray)
 	}
 }
 
-char** BuildIntmdMatrix(char* CipherText, int* KeyIndexVal, int KeyLength)
+char** BuildIntmdMatrix(const string CipherText, vector<int> KeyIndexVal, int KeyLength)
 {
-	int CipherTextLength = strlen(CipherText);
+	int CipherTextLength = CipherText.length();
 	int LongColumnCount = CipherTextLength%KeyLength;
 	int ShortColumnLength = CipherTextLength / KeyLength;
 
