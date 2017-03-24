@@ -94,11 +94,11 @@ int count_substring(const string str, const string substr)
 	return count;
 }
 
-float score(const string cipher, const int arr[][KEYLENGHT], unordered_map<string, int> hashtable)
+float score(const string cipher, const char arr[][KEYLENGHT], unordered_map<string, int> hashtable)
 {
 	int num_rows = ceil(cipher.length() / KEYLENGHT);
 	float score = 0;
-	vector<vector<int>> B(KEYLENGHT, vector<int>(KEYLENGHT, 0));
+	vector<vector<float>> B(KEYLENGHT, vector<float>(KEYLENGHT, 0));
 
 	for (int i = 0; i < KEYLENGHT; i++)
 	{
@@ -127,7 +127,7 @@ float score(const string cipher, const int arr[][KEYLENGHT], unordered_map<strin
 	return score;
 }
 
-float sum_log_freq_bigram(const int arr[][KEYLENGHT], unordered_map<string, int> hashtable, int left, int right, int rows)
+float sum_log_freq_bigram(const char arr[][KEYLENGHT], unordered_map<string, int> hashtable, int left, int right, int rows)
 {
 	string temp;
 	float sum = 0;
@@ -171,7 +171,7 @@ float sum_log_freq_bigram(const int arr[][KEYLENGHT], unordered_map<string, int>
 	return sum;
 }
 
-void likely_neighbours(vector<vector<int>> &B)
+void likely_neighbours(vector<vector<float>> &B)
 {
 	float max = 1; 
 	int max_r, max_c;
