@@ -18,6 +18,8 @@ void solve_transposition(vector<vector<char>>&, const string, const string);
 void sort_key(vector<int> &, vector<int> &, const string);
 void build_matrix(vector<vector<char>>&, const string, vector<int>, int);
 char custom_to_lower(char in);
+void dictionary_attack(const string, const string);
+string getText(vector<vector<char>>, int, int);
 
 void main()
 {
@@ -57,9 +59,9 @@ void main()
 
         if (chfile >= 2 || chfile <= 5)
         {
-            fp.open("dictionary/w" + chfile + ".txt");
+            fp.open("dictionary/w" + to_string(chfile) + ".txt");
 
-            ofstream outfile("out" + chfile + ".txt");
+            ofstream outfile("out" + to_string(chfile) + ".txt");
 
             while (getline(fp, key))
             {
@@ -326,14 +328,14 @@ void dictionary_attack(const string cipher, const string keys_file)
 
         for (int i = 2; i < 6; i++)
         {
-            dictp.open("dictionary/w" + i + ".txt");
+            dictp.open("dictionary/w" + to_string(i) + ".txt");
 
             while (getline(dictp, key1))
             {
                 vector<vector<char>> intermediate_cipher(ShortColumnLength + 1, vector<char>(key1.length()));
                 solve_transposition(intermediate_cipher, intmd_text, key1);
 
-                plaintext = getText(cipher, key);
+                plaintext = getText(intermediate_cipher, ShortColumnLength, key1.length());
 
                 if (plaintext.find("DOUBLETRANSPOSITION") != string::npos)
                 {
